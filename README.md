@@ -6,6 +6,9 @@
 
 ## Table of Contents
 
+- [Motivation](#motivation)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [How the Scraper Works](#how-the-scraper-works)
@@ -17,6 +20,77 @@
 - [Environment Variables](#environment-variables)
 - [Local Development](#local-development)
 - [Build Phases](#build-phases)
+- [Contributing](#contributing)
+
+---
+
+## Motivation
+
+Sneaker drops and Nike sales sell out in minutes. Manually refreshing product pages is tedious and unreliable. KickAlert was built to automate that — scraping Nike every 5 minutes and sending an email the moment a price drops or a sold-out product comes back in stock, so you never miss a drop again.
+
+---
+
+## Quick Start
+
+**Prerequisites:** Go 1.22+, PostgreSQL, an [Apify](https://apify.com) account (for the Nike scraper actor), and an SMTP server.
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/your-username/kick-alert.git
+cd kick-alert
+
+# 2. Copy the example env file and fill in your values
+cp .env.example .env
+
+# 3. Run database migrations
+make db/migrations/up
+
+# 4. Start the API (background scheduler included)
+make run/api
+```
+
+The API will be available at `http://localhost:4000`.
+
+---
+
+## Usage
+
+### Register and activate an account
+
+```bash
+# Register
+curl -X POST http://localhost:4000/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Jane Doe","email":"jane@example.com","password":"pa$$word123"}'
+
+# Activate (token is sent to your email)
+curl -X PUT http://localhost:4000/v1/activation \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<activation_token>"}'
+```
+
+### Log in and watch a product
+
+```bash
+# Log in — returns access and refresh tokens
+curl -X POST http://localhost:4000/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"jane@example.com","password":"pa$$word123"}'
+
+# Add a Nike product to the catalog by URL
+curl -X POST http://localhost:4000/v1/products \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"product_url":"https://www.nike.com/t/air-max-90-shoes/..."}'
+
+# Add the product to your watchlist
+curl -X POST http://localhost:4000/v1/watchlist \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"product_id":"<product_uuid>","alert_sale":true,"alert_restock":true}'
+```
+
+From here the background scheduler takes over — you will receive an email whenever a price drop or restock is detected.
 
 ---
 
@@ -364,3 +438,20 @@ make run/api
 
 - [ ] Stripe integration (free → pro upgrade)
 - [ ] Webhook delivery (Discord, Telegram, custom URL)
+
+---
+
+## Contributing
+
+Contributions are welcome! Here is how to get started:
+
+1. **Fork** the repository and create a feature branch off `master`.
+2. **Set up** your local environment following the [Quick Start](#quick-start) guide.
+3. **Make your changes** — keep commits focused and atomic.
+4. **Run the tests** before opening a PR:
+   ```bash
+   go test ./...
+   ```
+5. **Open a pull request** against `master` with a clear description of what you changed and why.
+
+Please open an issue first for any significant change so we can discuss the approach before you invest time in implementation.
