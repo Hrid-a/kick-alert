@@ -48,7 +48,7 @@ func (app *application) serve() error {
 
 	}()
 
-	// app.startScheduler()
+	app.startScheduler()
 
 	app.logger.Info("starting server", "addr", srv.Addr, "env", app.config.env)
 	err := srv.ListenAndServe()
