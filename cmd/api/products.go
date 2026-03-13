@@ -116,6 +116,47 @@ func (app *application) addProductHandler(c *gin.Context) {
 	c.Writer.WriteHeader(http.StatusAccepted)
 }
 
+func (app *application) getPriceHistoryHandler(c *gin.Context) {
+	productId, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		app.errorResponse(c, http.StatusBadRequest, "invalid product id")
+		return
+	}
+
+	limit := int32(50)
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 200 {
+			limit = int32(parsed)
+		}
+	}
+
+	history, err := app.db.GetPriceHistoryByProduct(c.Request.Context(), database.GetPriceHistoryByProductParams{
+		ProductID: productId,
+		Limit:     limit,
+	})
+	if err != nil {
+		app.serverErrorResponse(c, err)
+		return
+	}
+
+	type pricePoint struct {
+		Price     string    `json:"price"`
+		InStock   bool      `json:"in_stock"`
+		ScrapedAt time.Time `json:"scraped_at"`
+	}
+
+	result := make([]pricePoint, len(history))
+	for i, h := range history {
+		result[i] = pricePoint{
+			Price:     h.Price,
+			InStock:   h.InStock,
+			ScrapedAt: h.ScrapedAt,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"price_history": result})
+}
+
 func (app *application) getProductHandler(c *gin.Context) {
 
 	type response struct {

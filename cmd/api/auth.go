@@ -216,6 +216,6 @@ func (app *application) activateUserHandler(c *gin.Context) {
 		CreatedAt: user.CreatedAt.Time.UTC(),
 		Name:      user.Name,
 		Email:     user.Email,
-		Activated: user.Activated,
+		Activated: user.Activated.Valid && user.Activated.Bool,
 	}})
 }

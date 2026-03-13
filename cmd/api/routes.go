@@ -27,6 +27,7 @@ func (app *application) routes() *gin.Engine {
 	router.POST("/v1/products", app.authenticate(), app.addProductHandler)
 	router.GET("/v1/products", app.authenticate(), app.getProductsHandler)
 	router.GET("/v1/products/:id", app.authenticate(), app.getProductHandler)
+	router.GET("/v1/products/:id/price-history", app.authenticate(), app.getPriceHistoryHandler)
 
 	// Watchlist
 	router.POST("/v1/watchlist", app.authenticate(), app.addToWatchlistHandler)
@@ -38,5 +39,8 @@ func (app *application) routes() *gin.Engine {
 	router.GET("/v1/notifications", app.authenticate(), app.getNotificationsHandler)
 	router.PATCH("/v1/notifications/read-all", app.authenticate(), app.markAllNotificationsReadHandler)
 	router.PATCH("/v1/notifications/:id/read", app.authenticate(), app.markNotificationReadHandler)
+
+	// User preferences
+	router.PATCH("/v1/users/me/notifications", app.authenticate(), app.updateNotificationPrefsHandler)
 	return router
 }

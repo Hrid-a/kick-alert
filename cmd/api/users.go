@@ -16,13 +16,13 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID    `json:"id"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
-	Email     string       `json:"email"`
-	Name      string       `json:"name"`
-	Password  string       `json:"-"`
-	Activated sql.NullBool `json:"is_active"`
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	Password  string    `json:"-"`
+	Activated bool      `json:"is_active"`
 }
 
 func (app *application) registerUserHandler(c *gin.Context) {
@@ -109,4 +109,37 @@ func (app *application) registerUserHandler(c *gin.Context) {
 			Email:     user.Email,
 		},
 	})
+}
+
+func (app *application) updateNotificationPrefsHandler(c *gin.Context) {
+	userId := c.MustGet("userId").(uuid.UUID)
+
+	user, err := app.db.GetUserById(c.Request.Context(), userId)
+	if err != nil {
+		app.serverErrorResponse(c, err)
+		return
+	}
+	if user.Tier.String != "pro" {
+		app.errorResponse(c, http.StatusForbidden, "notification preferences are a pro feature")
+		return
+	}
+
+	var input struct {
+		NotifyEmail *bool `json:"notify_email" binding:"required"`
+	}
+	if err := c.BindJSON(&input); err != nil {
+		app.errorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err = app.db.UpdateNotifyEmail(c.Request.Context(), database.UpdateNotifyEmailParams{
+		NotifyEmail: sql.NullBool{Bool: *input.NotifyEmail, Valid: true},
+		ID:          userId,
+	})
+	if err != nil {
+		app.serverErrorResponse(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"notify_email": *input.NotifyEmail})
 }

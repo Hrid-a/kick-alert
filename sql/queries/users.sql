@@ -17,6 +17,9 @@ SELECT id, created_at, name, email, updated_at, activated, tier
 
 
 -- name: UpdateUser :exec
-UPDATE users 
+UPDATE users
         SET name = $1, email = $2, password_hash = $3, activated = $4
         WHERE id = $5;
+
+-- name: UpdateNotifyEmail :exec
+UPDATE users SET notify_email = $1 WHERE id = $2;

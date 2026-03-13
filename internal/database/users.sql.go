@@ -106,8 +106,22 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (User, e
 	return i, err
 }
 
+const updateNotifyEmail = `-- name: UpdateNotifyEmail :exec
+UPDATE users SET notify_email = $1 WHERE id = $2
+`
+
+type UpdateNotifyEmailParams struct {
+	NotifyEmail sql.NullBool
+	ID          uuid.UUID
+}
+
+func (q *Queries) UpdateNotifyEmail(ctx context.Context, arg UpdateNotifyEmailParams) error {
+	_, err := q.db.ExecContext(ctx, updateNotifyEmail, arg.NotifyEmail, arg.ID)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :exec
-UPDATE users 
+UPDATE users
         SET name = $1, email = $2, password_hash = $3, activated = $4
         WHERE id = $5
 `
