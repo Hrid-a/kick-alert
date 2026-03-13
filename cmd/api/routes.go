@@ -10,6 +10,7 @@ func (app *application) routes() *gin.Engine {
 
 	router := gin.Default()
 
+	router.Use(app.cors())
 	router.Use(func(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20) // 1 MB
 		c.Next()
@@ -20,6 +21,7 @@ func (app *application) routes() *gin.Engine {
 	// auth
 	router.POST("/v1/register", app.registerUserHandler)
 	router.POST("/v1/login", app.loginUserHandler)
+	router.POST("/v1/logout", app.logoutHandler)
 	router.GET("/v1/refresh", app.refreshTokenHandler)
 	router.PUT("/v1/activation", app.activateUserHandler)
 

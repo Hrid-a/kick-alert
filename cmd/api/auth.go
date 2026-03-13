@@ -19,9 +19,8 @@ func (app *application) loginUserHandler(c *gin.Context) {
 	}
 
 	type response struct {
-		User         User   `json:"user"`
-		Token        string `json:"token"`
-		RefreshToken string `json:"refresh_token"`
+		User  User   `json:"user"`
+		Token string `json:"token"`
 	}
 
 	if err := c.BindJSON(&input); err != nil {
@@ -69,6 +68,9 @@ func (app *application) loginUserHandler(c *gin.Context) {
 		return
 	}
 
+	secure := app.config.env == "production"
+	c.SetCookie("refresh_token", refreshToken, 3*24*60*60, "/", "", secure, true)
+
 	c.JSON(http.StatusOK, response{
 		User: User{
 			ID:        user.ID,
@@ -76,18 +78,16 @@ func (app *application) loginUserHandler(c *gin.Context) {
 			Email:     user.Email,
 			CreatedAt: user.CreatedAt.Time,
 		},
-		Token:        accessToken,
-		RefreshToken: refreshToken,
+		Token: accessToken,
 	})
 
 }
 
 func (app *application) refreshTokenHandler(c *gin.Context) {
 
-	token, err := auth.GetBearerToken(c.Request.Header)
-
+	token, err := c.Cookie("refresh_token")
 	if err != nil {
-		app.errorResponse(c, http.StatusUnauthorized, "couldn't proccess your request")
+		app.errorResponse(c, http.StatusUnauthorized, "missing refresh token")
 		return
 	}
 
@@ -143,10 +143,18 @@ func (app *application) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
+	secure := app.config.env == "production"
+	c.SetCookie("refresh_token", refreshToken, 3*24*60*60, "/", "", secure, true)
+
 	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+		"access_token": accessToken,
 	})
+}
+
+func (app *application) logoutHandler(c *gin.Context) {
+	secure := app.config.env == "production"
+	c.SetCookie("refresh_token", "", -1, "/", "", secure, true)
+	c.Status(http.StatusNoContent)
 }
 
 func (app *application) activateUserHandler(c *gin.Context) {

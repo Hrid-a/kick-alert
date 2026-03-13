@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -11,6 +12,28 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/time/rate"
 )
+
+func (app *application) cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		c.Header("Vary", "Origin")
+		origin := c.Request.Header.Get("Origin")
+
+		if slices.Contains(app.config.allowedOrigins, origin) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		}
+
+		if c.Request.Method == http.MethodOptions && c.Request.Header.Get("Access-Control-Request-Method") != "" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
 
 func (app *application) authenticate() gin.HandlerFunc {
 

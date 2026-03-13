@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ type config struct {
 	db_maxIdleConns         int
 	db_maxIdleTime          time.Duration
 	front_end_activationURL string
+	allowedOrigins          []string
 	jwt_secret              string
 	limiter                 struct {
 		rps     float64
@@ -88,6 +90,12 @@ func main() {
 	if front_end_activationURL == "" {
 		log.Fatal("env must be set")
 	}
+
+	allowedOriginsRaw := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOriginsRaw == "" {
+		log.Fatal("ALLOWED_ORIGINS must be set")
+	}
+	allowedOrigins := strings.Split(allowedOriginsRaw, ",")
 
 	db_maxOpenConns, err := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNS"))
 
@@ -166,6 +174,7 @@ func main() {
 		port:                    port,
 		env:                     env,
 		front_end_activationURL: front_end_activationURL,
+		allowedOrigins:          allowedOrigins,
 		db_maxOpenConns:         db_maxOpenConns,
 		db_maxIdleConns:         db_maxIdleConns,
 		db_maxIdleTime:          time.Duration(db_maxIdleTime) * time.Minute,

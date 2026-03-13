@@ -72,9 +72,10 @@ curl -X PUT http://localhost:4000/v1/activation \
 ### Log in and watch a product
 
 ```bash
-# Log in — returns access and refresh tokens
+# Log in — returns access token in JSON, sets refresh_token as an httpOnly cookie
 curl -X POST http://localhost:4000/v1/login \
   -H "Content-Type: application/json" \
+  -c cookies.txt \
   -d '{"email":"jane@example.com","password":"pa$$word123"}'
 
 # Add a Nike product to the catalog by URL
@@ -316,6 +317,7 @@ kick-alert/
 | Scrape frequency | Every 5 min | Every 5 min |
 | Alert channels | Email | Email |
 | Price history | Full | Full |
+| Notification preferences | — | Toggle email alerts on/off |
 
 ---
 
@@ -329,11 +331,18 @@ All authenticated endpoints require `Authorization: Bearer <access_token>`.
 POST  /v1/register          Create a new account
                             Body: { name, email, password }
 
-POST  /v1/login             Get access + refresh tokens
+POST  /v1/login             Authenticate and get access token
                             Body: { email, password }
+                            Response: { user, token }
+                            Cookie set: refresh_token (httpOnly)
 
-GET   /v1/refresh           Rotate tokens using refresh token
-                            Header: Authorization: Bearer <refresh_token>
+GET   /v1/refresh           Rotate tokens using the refresh_token cookie
+                            No body or header needed — browser sends cookie automatically
+                            Response: { access_token }
+                            Cookie set: refresh_token (rotated, httpOnly)
+
+POST  /v1/logout            Clear the refresh token cookie
+                            Response: 204 No Content
 
 PUT   /v1/activation        Activate account
                             Body: { token }
@@ -342,13 +351,17 @@ PUT   /v1/activation        Activate account
 ### Products (authenticated)
 
 ```
-POST  /v1/products          Scrape and add a product by Nike URL
-                            Body: { product_url }
+POST  /v1/products                      Scrape and add a product by Nike URL
+                                        Body: { product_url }
+                                        Response: 202 Accepted (scraping is async)
 
-GET   /v1/products          Search catalog
-                            Query: ?q=&category=&in_stock=&min_price=&max_price=&page=&limit=
+GET   /v1/products                      Search catalog
+                                        Query: ?q=&category=&in_stock=&min_price=&max_price=&page=&limit=
 
-GET   /v1/products/:id      Get product details
+GET   /v1/products/:id                  Get product details
+
+GET   /v1/products/:id/price-history    Get price + stock history
+                                        Query: ?limit= (default: 50, max: 200)
 ```
 
 ### Watchlist (authenticated)
@@ -369,11 +382,19 @@ DELETE /v1/watchlist/:id    Remove from watchlist
 
 ```
 GET    /v1/notifications            Get notification history
-                                    Query: ?page=&limit=&unread=true
+                                    Query: ?page=&page_size=&unread=true
 
 PATCH  /v1/notifications/:id/read   Mark a notification as read
 
 PATCH  /v1/notifications/read-all   Mark all notifications as read
+```
+
+### User Preferences (authenticated, pro only)
+
+```
+PATCH  /v1/users/me/notifications   Toggle email notifications
+                                    Body: { notify_email: true | false }
+                                    Returns 403 for free-tier users
 ```
 
 ### Healthcheck
@@ -389,13 +410,14 @@ GET   /v1/healthcheck       Returns status, environment, and version
 | Variable | Required | Description |
 |---|---|---|
 | `PORT` | Yes | Server port (e.g. `4000`) |
-| `ENV` | Yes | `development` or `production` |
+| `ENV` | Yes | `development` or `production` — controls cookie `Secure` flag |
 | `KICK_ALERT_DB_DSN` | Yes | PostgreSQL connection string |
 | `DB_MAX_OPEN_CONNS` | Yes | Max open DB connections |
 | `DB_MAX_IDLE_CONNS` | Yes | Max idle DB connections |
 | `DB_MAX_IDLE_TIME` | Yes | Connection idle timeout in minutes |
 | `JWT_SECRET` | Yes | Secret key for signing JWTs |
-| `FRONTEND_ACTIVATION_URL` | Yes | Base URL for activation email link |
+| `FRONTEND_ACTIVATION_URL` | Yes | Base URL for activation email link (e.g. `http://localhost:3000/activate`) |
+| `ALLOWED_ORIGINS` | Yes | Comma-separated list of allowed CORS origins (e.g. `http://localhost:3000,https://kickalert.com`) |
 | `SMTP_HOST` | Yes | SMTP server hostname |
 | `SMTP_PORT` | Yes | SMTP server port |
 | `SMTP_USERNAME` | Yes | SMTP username |
@@ -432,6 +454,10 @@ make run/api
 - [x] Background scheduler + price change detection
 - [x] Email notifications via SMTP
 - [x] Notifications endpoint with read/unread state
+- [x] Price history endpoint
+- [x] httpOnly cookie-based refresh token flow
+- [x] CORS with multi-origin support
+- [x] Pro-only notification preferences endpoint
 - [ ] Next.js: auth pages + watchlist dashboard
 
 ### Phase 3 — Growth & Monetisation
