@@ -11,6 +11,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func (app *application) setRefreshCookie(c *gin.Context, value string, maxAge int) {
+	production := app.config.env == "production"
+	sameSite := http.SameSiteLaxMode
+	if production {
+		sameSite = http.SameSiteNoneMode
+	}
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    value,
+		MaxAge:   maxAge,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   production,
+		SameSite: sameSite,
+	})
+}
+
 func (app *application) loginUserHandler(c *gin.Context) {
 
 	var input struct {
@@ -68,8 +85,7 @@ func (app *application) loginUserHandler(c *gin.Context) {
 		return
 	}
 
-	secure := app.config.env == "production"
-	c.SetCookie("refresh_token", refreshToken, 3*24*60*60, "/", "", secure, true)
+	app.setRefreshCookie(c, refreshToken, 3*24*60*60)
 
 	c.JSON(http.StatusOK, response{
 		User: User{
@@ -143,8 +159,7 @@ func (app *application) refreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	secure := app.config.env == "production"
-	c.SetCookie("refresh_token", refreshToken, 3*24*60*60, "/", "", secure, true)
+	app.setRefreshCookie(c, refreshToken, 3*24*60*60)
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
@@ -152,8 +167,7 @@ func (app *application) refreshTokenHandler(c *gin.Context) {
 }
 
 func (app *application) logoutHandler(c *gin.Context) {
-	secure := app.config.env == "production"
-	c.SetCookie("refresh_token", "", -1, "/", "", secure, true)
+	app.setRefreshCookie(c, "", -1)
 	c.Status(http.StatusNoContent)
 }
 
@@ -224,6 +238,6 @@ func (app *application) activateUserHandler(c *gin.Context) {
 		CreatedAt: user.CreatedAt.Time.UTC(),
 		Name:      user.Name,
 		Email:     user.Email,
-		Activated: user.Activated.Valid && user.Activated.Bool,
+		Activated: true,
 	}})
 }

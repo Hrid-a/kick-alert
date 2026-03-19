@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"slices"
 	"sync"
@@ -50,7 +49,6 @@ func (app *application) authenticate() gin.HandlerFunc {
 		userId, err := auth.ValidateJWT(tokenStr, app.config.jwt_secret)
 
 		if err != nil || userId == uuid.Nil {
-			fmt.Printf("\n\n invalid JWT\n\n")
 			app.errorResponse(c, http.StatusUnauthorized, "invalid or missing authentication token")
 			c.Abort()
 			return

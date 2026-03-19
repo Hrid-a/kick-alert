@@ -32,7 +32,7 @@ Sneaker drops and Nike sales sell out in minutes. Manually refreshing product pa
 
 ## Quick Start
 
-**Prerequisites:** Go 1.22+, PostgreSQL, an [Apify](https://apify.com) account (for the Nike scraper actor), and an SMTP server.
+**Prerequisites:** Go 1.22+, Node.js 20+, PostgreSQL, an [Apify](https://apify.com) account (for the Nike scraper actor), and an SMTP server.
 
 ```bash
 # 1. Clone the repo
@@ -113,7 +113,7 @@ KickAlert is a SaaS that monitors Nike for price drops and restocks — then not
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        FRONTEND                                  │
-│                    Next.js (App Router)                          │
+│               React Router v7 + Vite (SPA, no SSR)              │
 │        Auth · Dashboard · Watchlist · Notification Feed          │
 └──────────────────────────┬──────────────────────────────────────┘
                            │ HTTPS / REST
@@ -254,10 +254,10 @@ kick-alert/
 │   ├── main.go            # Entry point, config loading, starts server
 │   ├── server.go          # HTTP server with graceful shutdown
 │   ├── routes.go          # Gin router and middleware setup
-│   ├── middleware.go       # JWT auth + per-IP rate limiting
+│   ├── middleware.go       # JWT auth, CORS, per-IP rate limiting
 │   ├── errors.go          # Unified error response helpers
 │   ├── healthcheck.go     # GET /v1/healthcheck
-│   ├── auth.go            # Login, token refresh, activation handlers
+│   ├── auth.go            # Login, token refresh, logout, activation handlers
 │   ├── users.go           # Register handler
 │   ├── products.go        # Product catalog handlers + Apify scrape on add
 │   ├── watchlist.go       # Watchlist CRUD handlers
@@ -281,6 +281,33 @@ kick-alert/
 │       └── templates/
 │           ├── user_welcome.tmpl
 │           └── price_alert.tmpl
+├── frontend/
+│   ├── app/
+│   │   ├── routes/        # File-based routes (React Router v7)
+│   │   │   ├── home.tsx                        # Landing page
+│   │   │   ├── _auth.tsx                       # Auth layout (login/register/activate)
+│   │   │   ├── _auth.login.tsx
+│   │   │   ├── _auth.register.tsx
+│   │   │   ├── _auth.activate.tsx
+│   │   │   ├── _protected.tsx                  # Protected layout (requires auth)
+│   │   │   ├── _protected.dashboard.tsx        # Watchlist dashboard
+│   │   │   ├── _protected.notifications.tsx
+│   │   │   ├── _protected.products.$id.tsx     # Product detail + price chart
+│   │   │   └── _protected.settings.tsx
+│   │   ├── components/
+│   │   │   ├── dashboard/  # Dashboard-specific components
+│   │   │   └── ui/         # shadcn/ui component library
+│   │   ├── context/
+│   │   │   └── auth.tsx    # Auth context + token state
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── lib/
+│   │       ├── api.ts      # Axios instance with auth interceptors
+│   │       ├── auth.ts     # Token helpers
+│   │       └── schema.ts   # Zod validation schemas
+│   ├── Dockerfile
+│   ├── react-router.config.ts
+│   ├── vite.config.ts
+│   └── package.json
 ├── sql/
 │   ├── schema/            # goose migrations (6 files)
 │   └── queries/           # sqlc source queries
@@ -296,7 +323,12 @@ kick-alert/
 | Layer | Choice | Reason |
 |---|---|---|
 | Language | **Go** | Cheap goroutines, great for background workers |
-| Frontend | **Next.js** (App Router) | SSR, great DX |
+| Frontend | **React Router v7 + Vite** | SPA mode, file-based routing, fast HMR |
+| UI Components | **shadcn/ui** (Radix UI + Tailwind v4) | Accessible, unstyled primitives with Tailwind |
+| Data Fetching | **TanStack Query** | Caching, background refetch, loading states |
+| Forms | **React Hook Form + Zod** | Performant forms with schema validation |
+| Charts | **Recharts** | Composable charts for price history |
+| HTTP Client | **Axios** | Interceptors for auth token injection |
 | Database | **PostgreSQL** | Relational integrity, battle-tested |
 | DB Queries | **sqlc** | Type-safe SQL, no ORM magic |
 | Migrations | **goose** | File-based, CI-friendly |
@@ -438,7 +470,14 @@ make db/migrations/up
 
 # Start API (includes background scheduler)
 make run/api
+
+# Start frontend dev server (in a separate terminal)
+cd frontend
+npm install
+npm run dev
 ```
+
+The frontend dev server runs at `http://localhost:5173`.
 
 ---
 
@@ -455,29 +494,14 @@ make run/api
 - [x] Email notifications via SMTP
 - [x] Notifications endpoint with read/unread state
 - [x] Price history endpoint
-- [x] httpOnly cookie-based refresh token flow
-- [x] CORS with multi-origin support
+- [x] httpOnly cookie-based refresh token flow (SameSite=Lax in dev, SameSite=None in production)
+- [x] CORS with credentials + multi-origin support
 - [x] Pro-only notification preferences endpoint
-- [ ] Next.js: auth pages + watchlist dashboard
+- [x] React Router v7 frontend: auth pages (login, register, activate)
+- [x] React Router v7 frontend: watchlist dashboard + product detail + notifications + settings
 
 ### Phase 3 — Growth & Monetisation
 
 - [ ] Stripe integration (free → pro upgrade)
 - [ ] Webhook delivery (Discord, Telegram, custom URL)
 
----
-
-## Contributing
-
-Contributions are welcome! Here is how to get started:
-
-1. **Fork** the repository and create a feature branch off `master`.
-2. **Set up** your local environment following the [Quick Start](#quick-start) guide.
-3. **Make your changes** — keep commits focused and atomic.
-4. **Run the tests** before opening a PR:
-   ```bash
-   go test ./...
-   ```
-5. **Open a pull request** against `master` with a clear description of what you changed and why.
-
-Please open an issue first for any significant change so we can discuss the approach before you invest time in implementation.
