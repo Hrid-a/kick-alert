@@ -11,7 +11,6 @@ export default [
 
   layout('routes/_protected.tsx', [
     route('dashboard', 'routes/_protected.dashboard.tsx'),
-    route('products', 'routes/_protected.products.tsx'),
     route('products/:id', 'routes/_protected.products.$id.tsx'),
     route('notifications', 'routes/_protected.notifications.tsx'),
     route('settings', 'routes/_protected.settings.tsx'),

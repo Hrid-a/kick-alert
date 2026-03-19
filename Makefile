@@ -22,6 +22,17 @@ confirm:
 run/api:
 	go run ./cmd/api
 
+## run/frontend: run the frontend application
+.PHONY: run/frontend
+run/frontend:
+	cd frontend && npm run dev
+
+## install/deps: install the deps
+.PHONY: install/deps
+install/deps:
+	cd frontend && npm install
+	cd ..
+
 ## db/psql: connect to the database using psql
 .PHONY: db/psql
 db/psql:

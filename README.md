@@ -472,9 +472,8 @@ make db/migrations/up
 make run/api
 
 # Start frontend dev server (in a separate terminal)
-cd frontend
-npm install
-npm run dev
+make install/deps # The frist time run this command
+make run/frontend
 ```
 
 The frontend dev server runs at `http://localhost:5173`.
